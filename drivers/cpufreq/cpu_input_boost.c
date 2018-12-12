@@ -10,6 +10,7 @@
 #include <linux/fb.h>
 #include <linux/input.h>
 #include <linux/slab.h>
+#include "../../kernel/sched/sched.h"
 
 unsigned long last_input_time;
 
@@ -46,7 +47,10 @@ static u32 get_boost_freq(struct boost_drv *b, u32 cpu)
 	if (cpumask_test_cpu(cpu, cpu_lp_mask))
 		return CONFIG_INPUT_BOOST_FREQ_LP;
 
-	return CONFIG_INPUT_BOOST_FREQ_PERF;
+	if (cpu_rq(cpu)->nr_running > 1)
+		return CONFIG_INPUT_BOOST_FREQ_PERF;;
+	else
+		return 0;
 }
 
 static u32 get_min_freq(struct boost_drv *b, u32 cpu, u32 state)
