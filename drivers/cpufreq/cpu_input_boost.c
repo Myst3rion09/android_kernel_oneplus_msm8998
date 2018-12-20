@@ -11,6 +11,8 @@
 #include <linux/input.h>
 #include <linux/slab.h>
 
+unsigned long last_input_time;
+
 /* Available bits for boost_drv state */
 #define SCREEN_AWAKE		BIT(0)
 #define INPUT_BOOST		BIT(1)
@@ -236,6 +238,8 @@ static void cpu_input_boost_input_event(struct input_handle *handle,
 		return;
 
 	queue_work(b->wq, &b->input_boost);
+
+	last_input_time = jiffies;
 }
 
 static int cpu_input_boost_input_connect(struct input_handler *handler,
