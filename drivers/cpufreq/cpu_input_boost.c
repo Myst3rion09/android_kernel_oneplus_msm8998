@@ -50,8 +50,15 @@ static u32 get_boost_freq(struct boost_drv *b, u32 cpu)
 	return CONFIG_INPUT_BOOST_FREQ_PERF;
 }
 
-static u32 get_min_freq(struct boost_drv *b, u32 cpu)
+static u32 get_min_freq(struct boost_drv *b, u32 cpu, u32 state)
 {
+	if (state & SCREEN_AWAKE) {
+		if (cpumask_test_cpu(cpu, cpu_lp_mask))
+			return CONFIG_AWAKE_REMOVE_INPUT_BOOST_FREQ_LP;
+
+		return CONFIG_AWAKE_REMOVE_INPUT_BOOST_FREQ_PERF;
+	}
+
 	if (cpumask_test_cpu(cpu, cpu_lp_mask))
 		return CONFIG_REMOVE_INPUT_BOOST_FREQ_LP;
 
@@ -223,7 +230,7 @@ static int cpu_notifier_cb(struct notifier_block *nb,
 		boost_freq = get_boost_freq(b, policy->cpu);
 		policy->min = min(policy->max, boost_freq);
 	} else {
-		min_freq = get_min_freq(b, policy->cpu);
+		min_freq = get_min_freq(b, policy->cpu, state);
 		policy->min = max(policy->cpuinfo.min_freq, min_freq);
 	}
 
