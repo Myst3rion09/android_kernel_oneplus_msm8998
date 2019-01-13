@@ -104,10 +104,13 @@ static void unboost_all_cpus(struct boost_drv *b)
 void cpu_input_boost_kick(void)
 {
 	struct boost_drv *b = boost_drv_g;
+        u32 state;
 
 	if (!b)
 		return;
-
+	state = get_boost_state(b);
+	if (!(state & SCREEN_AWAKE))
+		return;
 	queue_work(b->wq, &b->input_boost);
 }
 
