@@ -17,6 +17,9 @@ static bool stune_boost_active;
 static int boost_slot;
 static unsigned short dynamic_stune_boost;
 module_param(dynamic_stune_boost, short, 0644);
+static unsigned int dynamic_stune_boost_ms = 40;
+module_param(dynamic_stune_boost_ms, uint, 0644);
+static struct delayed_work dynamic_stune_boost_rem;
 #endif
 
 /* Available bits for boost_drv state */
@@ -135,6 +138,9 @@ static void input_boost_worker(struct work_struct *work)
 {
 	struct boost_drv *b = container_of(work, typeof(*b), input_boost);
 
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+        cancel_delayed_work_sync(&b->dynamic_stune_boost_rem);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 	if (!cancel_delayed_work_sync(&b->input_unboost)) {
 		set_boost_bit(b, INPUT_BOOST);
 		update_online_cpu_policy();
@@ -143,6 +149,9 @@ static void input_boost_worker(struct work_struct *work)
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 	if (!do_stune_boost("top-app", dynamic_stune_boost, &boost_slot))
 		stune_boost_active = true;
+
+        queue_delayed_work(b->wq, &b->dynamic_stune_boost_rem,
+                msecs_to_jiffies(dynamic_stune_boost_ms));
 #endif
 	queue_delayed_work(b->wq, &b->input_unboost,
 		msecs_to_jiffies(CONFIG_INPUT_BOOST_DURATION_MS));
@@ -154,12 +163,6 @@ static void input_unboost_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), typeof(*b), input_unboost);
 
 	clear_boost_bit(b, INPUT_BOOST);
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-	if (stune_boost_active) {
-		reset_stune_boost("top-app", boost_slot);
-		stune_boost_active = false;
-	}
-#endif
 	update_online_cpu_policy();
 }
 
@@ -186,14 +189,19 @@ static void max_unboost_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), typeof(*b), max_unboost);
 
 	clear_boost_bit(b, WAKE_BOOST | MAX_BOOST);
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-	if (stune_boost_active) {
-		reset_stune_boost("top-app", boost_slot);
-		stune_boost_active = false;
-	}
-#endif
 	update_online_cpu_policy();
 }
+
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+static void do_dynamic_stune_boost_rem(struct work_struct *work)
+{
+        /* Reset dynamic stune boost value to the default value */
+        if (stune_boost_active) {
+                reset_stune_boost("top-app", boost_slot);
+                stune_boost_active = false;
+        }
+}
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 
 static int cpu_notifier_cb(struct notifier_block *nb,
 			   unsigned long action, void *data)
@@ -300,12 +308,6 @@ free_handle:
 
 static void cpu_input_boost_input_disconnect(struct input_handle *handle)
 {
-#ifdef CONFIG_DYNAMIC_STUNE_BOOST
-	if (stune_boost_active) {
-		reset_stune_boost("top-app", boost_slot);
-		stune_boost_active = false;
-	}
-#endif
 	input_close_device(handle);
 	input_unregister_handle(handle);
 	kfree(handle);
@@ -365,6 +367,9 @@ static int __init cpu_input_boost_init(void)
 	INIT_DELAYED_WORK(&b->input_unboost, input_unboost_worker);
 	INIT_WORK(&b->max_boost, max_boost_worker);
 	INIT_DELAYED_WORK(&b->max_unboost, max_unboost_worker);
+#ifdef CONFIG_DYNAMIC_STUNE_BOOST
+	INIT_DELAYED_WORK(&b->dynamic_stune_boost_rem, do_dynamic_stune_boost_rem);
+#endif /* CONFIG_DYNAMIC_STUNE_BOOST */
 	atomic_set(&b->state, 0);
 
 	b->cpu_notif.notifier_call = cpu_notifier_cb;
