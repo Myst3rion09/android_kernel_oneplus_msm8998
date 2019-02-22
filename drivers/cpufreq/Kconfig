@@ -309,6 +309,21 @@ config REMOVE_INPUT_BOOST_FREQ_PERF
 	  of using a higher than cpuinfo.min_freq (e.g. OnePlus 5/5T/6)
 	  this frequency will be used.
 
+config DYNAMIC_STUNE_BOOST_LEVEL
+        int "Stune boost level"
+        depends on DYNAMIC_STUNE_BOOST
+        default "50"
+        help
+	  Dynamic Stune Boost level. A value of 0 disables 
+          SchedTune boosting.
+
+config DYNAMIC_STUNE_BOOST_MS   
+        int "Stune boost duration"
+        depends on DYNAMIC_STUNE_BOOST
+        default "1500"
+        help
+          Dynamic Stune Boost duration in milliseconds.
+
 endif
 
 comment "CPU frequency scaling drivers"

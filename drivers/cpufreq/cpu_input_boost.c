@@ -15,10 +15,8 @@
 #ifdef CONFIG_DYNAMIC_STUNE_BOOST
 static bool stune_boost_active;
 static int boost_slot;
-static unsigned short dynamic_stune_boost;
-module_param(dynamic_stune_boost, short, 0644);
-static unsigned int dynamic_stune_boost_ms = 40;
-module_param(dynamic_stune_boost_ms, uint, 0644);
+static unsigned short dynamic_stune_boost = CONFIG_DYNAMIC_STUNE_BOOST_LEVEL;
+static unsigned int dynamic_stune_boost_ms = CONFIG_DYNAMIC_STUNE_BOOST_MS;
 #endif
 
 /* Available bits for boost_drv state */
