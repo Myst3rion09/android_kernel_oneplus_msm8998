@@ -2008,6 +2008,7 @@ struct hdd_context_s {
 	/** P2P Device MAC Address for the adapter  */
 	struct qdf_mac_addr p2pDeviceAddress;
 
+	qdf_wake_lock_t rx_wake_lock;
 	qdf_wake_lock_t sap_wake_lock;
 
 #ifdef FEATURE_WLAN_TDLS
@@ -2262,6 +2263,8 @@ struct hdd_context_s {
 	enum sar_version sar_version;
 
 	bool is_ssr_in_progress;
+
+	uint8_t pktcapture_mode;
 };
 
 int hdd_validate_channel_and_bandwidth(hdd_adapter_t *adapter,
