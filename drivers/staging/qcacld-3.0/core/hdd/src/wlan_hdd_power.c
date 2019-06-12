@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1475,6 +1475,8 @@ QDF_STATUS hdd_wlan_shutdown(void)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	pHddCtx->is_ssr_in_progress = true;
+
 	cds_clear_concurrent_session_count();
 
 	hdd_debug("Invoking packetdump deregistration API");
@@ -1691,6 +1693,9 @@ success:
 	if (pHddCtx->config->sap_internal_restart)
 		hdd_ssr_restart_sap(pHddCtx);
 	hdd_is_interface_down_during_ssr(pHddCtx);
+
+	pHddCtx->is_ssr_in_progress = false;
+
 	hdd_wlan_ssr_reinit_event();
 	return QDF_STATUS_SUCCESS;
 }
@@ -2480,6 +2485,11 @@ static int __wlan_hdd_cfg80211_get_txpower(struct wiphy *wiphy,
 	/* Validate adapter sessionId */
 	if (wlan_hdd_validate_session_id(adapter->sessionId)) {
 		hdd_err("invalid session id: %d", adapter->sessionId);
+		return -EINVAL;
+	}
+
+	if (sta_ctx->hdd_ReassocScenario) {
+		hdd_debug("Roaming is in progress, rej this req");
 		return -EINVAL;
 	}
 
